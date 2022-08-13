@@ -199,16 +199,16 @@ private:
 	bool bFiringBullet;
 	FTimerHandle CrosshairShootTimer;
 
-	/** Left mouse button or right console trigger pressed */
+	// Left mouse button or right console trigger pressed
 	bool bFireButtonPressed;
 
-	/** True when we can fire. False when waiting for the timer */
+	// True when we can fire. False when waiting for the timer
 	bool bShouldFire;
 
-	/** Rate of automatic gun fire */
+	// Rate of automatic gun fire
 	float AutomaticFireRate;
 
-	/** Sets a timer between gunshots */
+	// Sets a timer between gunshots
 	FTimerHandle AutoFireTimer;
 
 public:
