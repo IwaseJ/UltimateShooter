@@ -6,6 +6,18 @@
 #include "GameFramework/Actor.h"
 #include "Item.generated.h"
 
+UENUM(BlueprintType)
+enum class EItemRarity : uint8
+{
+	EIR_Damaged UMETA(DIsplayName = "Damaged"),
+	EIR_Common UMETA(DIsplayName = "Common"),
+	EIR_Uncommon UMETA(DIsplayName = "Uncommon"),
+	EIR_Rare UMETA(DIsplayName = "Rare"),
+	EIR_Legendary UMETA(DIsplayName = "Legendary"),
+
+	EIR_MAX UMETA(DIsplayName = "DefaultMAX")
+};
+
 UCLASS()
 class ULTIMATESHOOTER_API AItem : public AActor
 {
@@ -38,6 +50,9 @@ protected:
 		UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex);
 
+	// Sets the ActiveStars array of bools based on rarity
+	void SetActiveStars();
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -67,6 +82,15 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
 	int32 ItemCount;
 
+	// Item rarity - determines number of stars in PickupWidget
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	EItemRarity ItemRarity;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	TArray<bool> ActiveStars;
+
 public:
 	FORCEINLINE UWidgetComponent* GetPickupWidget() const { return PickupWidget; }
+	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
+	FORCEINLINE UBoxComponent* GetCollisionBox() const { return CollisionBox; }
 };
