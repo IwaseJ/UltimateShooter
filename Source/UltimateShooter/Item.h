@@ -18,6 +18,18 @@ enum class EItemRarity : uint8
 	EIR_MAX UMETA(DIsplayName = "DefaultMAX")
 };
 
+UENUM(BlueprintType)
+enum class EItemState : uint8
+{
+	EIS_Pickup UMETA(DIsplayName = "Pickup"),
+	EIS_EquipInterping UMETA(DIsplayName = "EquipInterping"),
+	EIS_Picked UMETA(DIsplayName = "Pickedup"),
+	EIS_Equipped UMETA(DIsplayName = "Equipped"),
+	EIS_Falling UMETA(DIsplayName = "Falling"),
+
+	EIS_MAX UMETA(DIsplayName = "DefaultMAX")
+};
+
 UCLASS()
 class ULTIMATESHOOTER_API AItem : public AActor
 {
@@ -53,16 +65,25 @@ protected:
 	// Sets the ActiveStars array of bools based on rarity
 	void SetActiveStars();
 
+	// Sets Properties of the Item's components based on the State
+	void SetItemProperties(EItemState State);
+
+	// Called when ItemInterpTimer is finished
+	void FinishInterping();
+
+	// Handles item interpolation when in the EquipInterping state
+	void ItemInterp(float DeltaTime);
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	/** Skeletal Mesh for the item */
+	// Skeletal Mesh for the item
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
 		USkeletalMeshComponent* ItemMesh;
 
-	/** Line trace collides with box to show HUD widgets */
+	// Line trace collides with box to show HUD widgets
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
 		class UBoxComponent* CollisionBox;
 
@@ -89,8 +110,55 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
 	TArray<bool> ActiveStars;
 
+	// State of the item
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	EItemState ItemState;
+
+	// The curve asset to use for the item's Z location when interping
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	class UCurveFloat* ItemZCurve;
+
+	// Starting location when interping begins
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	FVector ItemInterpStartLocation;
+
+	// Target interp location in front of the camera
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	FVector CameraTargetLocation;
+
+	// True when interping
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	bool bInterping;
+
+	// Plays when we start interping
+	FTimerHandle ItemInterpTimer;
+	// Duration of the curve and timer
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	float ZCurveTime;
+
+	// Pointer to the character
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	class AShooterCharacter* Character;
+
+	// X and Y for the Item while interping in the EquipInterping state
+	float ItemInterpX;
+	float ItemInterpY;
+
+	// Initial Yaw offset between the camera and the interping item
+	float InterpInitialYawOffset;
+
+	// Curved used to scale the item when interping
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* ItemScaleCurve;
+
 public:
 	FORCEINLINE UWidgetComponent* GetPickupWidget() const { return PickupWidget; }
 	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
 	FORCEINLINE UBoxComponent* GetCollisionBox() const { return CollisionBox; }
+	FORCEINLINE EItemState GetItemState() const { return ItemState; }
+	void SetItemState(EItemState State);
+	FORCEINLINE USkeletalMeshComponent* GetItemMesh() const { return ItemMesh; }
+
+	// Called from the AShooterCharacter class
+	void StartItemCurve(AShooterCharacter* Char);
 };
