@@ -4,16 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "AmmoType.h"
 #include "ShooterCharacter.generated.h"
-
-UENUM(BlueprintType)
-enum class EAmmoType : uint8
-{
-	EAT_9mm UMETA(DisplayName = "9mm"),
-	EAT_AR UMETA(DisplayName = "AssaultRifle"),
-
-	EAT_MAX UMETA(DisplayName = "DefaultMAX")
-};
 
 UENUM(BlueprintType)
 enum class ECombatState :uint8
@@ -125,11 +117,27 @@ protected:
 	// Check to make sure our weapon has ammo
 	bool WeaponHasAmmo();
 
+	// Fireweapon Functions
 	void PlayFireSound();
-
 	void SendBullet();
-
 	void PlayGunFireMontage();
+
+	// Bound to the R key and Gamepad Face Button Left
+	void ReloadButtonPressed();
+
+	// Handle reloading of the weapon
+	void ReloadWeapon();
+
+	// Checks to see if we have ammo of the EquippedWeapons's ammo type
+	bool CarryingAmmo();
+
+	// Called from Animation Blueprint with GrabClip notify
+	UFUNCTION(BlueprintCallable)
+	void GrabClip();
+
+	// Called from Animation Blueprint with ReleaseClip notify
+	UFUNCTION(BlueprintCallable)
+	void ReleaseClip();
 
 
 public:	
@@ -309,6 +317,21 @@ private:
 	// Combat State, can only fire or reload if in Unoccupied state
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 	ECombatState CombatState;
+
+	// Montage for reload animations
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* ReloadMontage;
+
+	UFUNCTION(BlueprintCallable)
+	void FinishReloading();
+
+	// Transform of the clip when we first grab the clip during reloading
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	FTransform ClipTransform;
+
+	// Scene component to attach to the Character's hand during reloading
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* HandSceneComponent;
 
 public:
 	// Returns CameraBoom subobject
