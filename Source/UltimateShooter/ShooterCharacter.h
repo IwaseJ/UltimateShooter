@@ -141,6 +141,15 @@ protected:
 
 	void CrouchButtonPressed();
 
+	virtual void Jump() override;
+
+	// Interps capsule half height while crouching/standing
+	void InterpCapsuleHalfHeight(float DeltaTime);
+
+	void Aim();
+	
+	void StopAiming();
+
 
 public:	
 	// Called every frame
@@ -226,9 +235,11 @@ private:
 	bool bAiming;
 
 	// Default camera field of view value
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	float CameraDefaultFOV;
 
 	// Field of view value for when zoomed in
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	float CameraZoomedFOV;
 
 	// Current field of view this frame
@@ -338,6 +349,36 @@ private:
 	// True while crouching
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
 	bool bCrouching;
+
+	// Regular movement speed
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
+	float BaseMovementSpeed;
+
+	// Crouch movement speed
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
+	float CrouchMovementSpeed;
+
+	// Current half height of capsule
+	float CurrentCapsuleHalfHeight;
+
+	// Half height of the capsule while not crouching
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "true"))
+	float StandingCapsuleHalfHeight;
+
+	// Half height of the capsule while crouching
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "true"))
+	float CrouchingCapsuleHalfHeight;
+
+	// Ground friction while not crouching
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "true"))
+	float BaseGroundFriction;
+
+	// Ground friction while crouching
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement", meta = (AllowPrivateAccess = "true"))
+	float CrouchingGroundFriction;
+
+	// Used for knowing when the aiming button is pressed
+	bool bAimingButtonPressed;
 
 public:
 	// Returns CameraBoom subobject
