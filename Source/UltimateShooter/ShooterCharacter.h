@@ -146,10 +146,10 @@ protected:
 	// Interps capsule half height while crouching/standing
 	void InterpCapsuleHalfHeight(float DeltaTime);
 
-	void Aim();
-	
+	void Aim();	
 	void StopAiming();
 
+	void PickupAmmo(class AAmmo* Ammo);
 
 public:	
 	// Called every frame
