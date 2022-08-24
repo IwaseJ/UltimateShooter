@@ -9,25 +9,34 @@
 UENUM(BlueprintType)
 enum class EItemRarity : uint8
 {
-	EIR_Damaged UMETA(DIsplayName = "Damaged"),
-	EIR_Common UMETA(DIsplayName = "Common"),
-	EIR_Uncommon UMETA(DIsplayName = "Uncommon"),
-	EIR_Rare UMETA(DIsplayName = "Rare"),
-	EIR_Legendary UMETA(DIsplayName = "Legendary"),
+	EIR_Damaged UMETA(DisplayName = "Damaged"),
+	EIR_Common UMETA(DisplayName = "Common"),
+	EIR_Uncommon UMETA(DisplayName = "Uncommon"),
+	EIR_Rare UMETA(DisplayName = "Rare"),
+	EIR_Legendary UMETA(DisplayName = "Legendary"),
 
-	EIR_MAX UMETA(DIsplayName = "DefaultMAX")
+	EIR_MAX UMETA(DisplayName = "DefaultMAX")
 };
 
 UENUM(BlueprintType)
 enum class EItemState : uint8
 {
-	EIS_Pickup UMETA(DIsplayName = "Pickup"),
-	EIS_EquipInterping UMETA(DIsplayName = "EquipInterping"),
-	EIS_Picked UMETA(DIsplayName = "Pickedup"),
-	EIS_Equipped UMETA(DIsplayName = "Equipped"),
-	EIS_Falling UMETA(DIsplayName = "Falling"),
+	EIS_Pickup UMETA(DisplayName = "Pickup"),
+	EIS_EquipInterping UMETA(DisplayName = "EquipInterping"),
+	EIS_Picked UMETA(DisplayName = "Pickedup"),
+	EIS_Equipped UMETA(DisplayName = "Equipped"),
+	EIS_Falling UMETA(DisplayName = "Falling"),
 
-	EIS_MAX UMETA(DIsplayName = "DefaultMAX")
+	EIS_MAX UMETA(DisplayName = "DefaultMAX")
+};
+
+UENUM(BlueprintType)
+enum class EItemType : uint8
+{
+	EIT_Ammo UMETA(DisplayName = "Ammo"),
+	EIT_Weapon UMETA(DisplayName = "Weapon"),
+
+	EIT_MAX UMETA(DisplayName = "DefaultMAX")
 };
 
 UCLASS()
@@ -74,9 +83,20 @@ protected:
 	// Handles item interpolation when in the EquipInterping state
 	void ItemInterp(float DeltaTime);
 
+	// Get interp location location based on the item type
+	FVector GetInterpLocation();
+
+	void PlayPickupSound();
+
+		virtual void InitializeCustomDepth();
+	
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	// Called in AShooterCharacter::GetPickupItem
+	void PlayEquipSound();
 
 private:
 	// Skeletal Mesh for the item
@@ -159,6 +179,14 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
 	USoundCue* EquipSound;
 
+	// Enum for the type of item this Item is
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	EItemType ItemType;
+
+	// Index of the interp location this item is interping to
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item Properties", meta = (AllowPrivateAccess = "true"))
+	int32 InterpLocIndex;
+
 public:
 	FORCEINLINE UWidgetComponent* GetPickupWidget() const { return PickupWidget; }
 	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
@@ -172,4 +200,7 @@ public:
 
 	// Called from the AShooterCharacter class
 	void StartItemCurve(AShooterCharacter* Char);
+
+	virtual void EnableCustomDepth();
+	virtual void DisableCustomDepth();
 };
