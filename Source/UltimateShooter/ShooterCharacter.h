@@ -245,14 +245,6 @@ private:
 		meta = (ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
 	float MouseAimingLookUpRate;
 
-	// Randomized gunshot sound cue
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (AllowPrivateAccess = "true"))
-	class USoundCue* FireSound;
-
-	// Flash spawned at BarrelSocket
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (AllowPrivateAccess = "true"))
-	class UParticleSystem* MuzzleFlash;
-
 	// Montage for firing the weapon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat", meta = (AllowPrivateAccess = "true"))
 	class UAnimMontage* HipFireMontage;
@@ -313,9 +305,6 @@ private:
 
 	// True when we can fire. False when waiting for the timer
 	bool bShouldFire;
-
-	// Rate of automatic gun fire
-	float AutomaticFireRate;
 
 	// Sets a timer between gunshots
 	FTimerHandle AutoFireTimer;
@@ -519,4 +508,6 @@ public:
 	void StartPickupSoundTimer();
 	void StartEquipSoundTimer();
 	void UnhighlightInventorySlot();
+
+	FORCEINLINE AWeapon* GetEquippedWeapon() const { return EquippedWeapon; }
 };
