@@ -17,6 +17,8 @@
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Ammo.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
+#include "UltimateShooter.h"
 
 // Sets default values
 AShooterCharacter::AShooterCharacter() :
@@ -1037,7 +1039,7 @@ void AShooterCharacter::UnhighlightInventorySlot()
 	HighlightedSlot = -1;
 }
 
-void AShooterCharacter::Footstep()
+EPhysicalSurface AShooterCharacter::GetSurfaceType()
 {
 	FHitResult HitResult;
 	const FVector Start{ GetActorLocation() };
@@ -1051,11 +1053,7 @@ void AShooterCharacter::Footstep()
 		End,
 		ECollisionChannel::ECC_Visibility, 
 		QueryParams);
-
-	if (HitResult.GetActor())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Hit Actor: %s"), *HitResult.GetActor()->GetName())
-	}
+	return UPhysicalMaterial::DetermineSurfaceType(HitResult.PhysMaterial.Get());
 
 }
 
