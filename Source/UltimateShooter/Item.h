@@ -62,6 +62,9 @@ struct FItemRarityTable : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 CustomDepthStencil;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float DamageRarityMultiplier;
 };
 
 UCLASS()
@@ -297,6 +300,10 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rarity", meta = (AllowPrivateAccess = "true"))
 	UTexture2D* IconBackground;
 
+	// Damage multiplier based on rarity
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rarity", meta = (AllowPrivateAccess = "true"))
+	float DamageRarityMultiplier;
+
 public:
 	FORCEINLINE UWidgetComponent* GetPickupWidget() const { return PickupWidget; }
 	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
@@ -325,6 +332,7 @@ public:
 	FORCEINLINE FLinearColor GetGlowColor() const { return GlowColor; }
 	FORCEINLINE int32 GetMaterialIndex() const { return MaterialIndex; }
 	FORCEINLINE void SetMaterialIndex(int32 Index) { MaterialIndex = Index; }
+	FORCEINLINE float GetDamageRarityMultiplier() const { return DamageRarityMultiplier; }
 
 	// Called from the AShooterCharacter class
 	void StartItemCurve(AShooterCharacter* Char, bool bForcePlaySound = false);

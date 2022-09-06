@@ -19,6 +19,10 @@
 #include "Ammo.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "UltimateShooter.h"
+#include "BulletHitInterface.h"
+#include "Enemy.h"
+#include "EnemyController.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 // Sets default values
 AShooterCharacter::AShooterCharacter() :
@@ -82,7 +86,11 @@ AShooterCharacter::AShooterCharacter() :
 	PickupSoundResetTime(0.2f),
 	EquipSoundResetTime(0.2f),
 	// Icon animation property
-	HighlightedSlot(-1)	
+	HighlightedSlot(-1),
+	Health(100.f),
+	MaxHealth(100.f),
+	StunChance(.25f),
+	bDead(false)
 
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -137,6 +145,49 @@ AShooterCharacter::AShooterCharacter() :
 	InterpComp6->SetupAttachment(GetFollowCamera());
 
 }
+
+	float AShooterCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+	{
+		if (Health - DamageAmount <= 0.f)
+		{
+			Health = 0.f;
+			Die();
+
+			auto EnemyController = Cast<AEnemyController>(EventInstigator);
+			if (EnemyController)
+			{
+				EnemyController->GetBlackboardComponent()->SetValueAsBool(FName(TEXT("CharacterDead")), true);
+			}
+		}
+		else
+		{
+			Health -= DamageAmount;
+		}
+
+		return DamageAmount;
+	}
+
+	void AShooterCharacter::Die()
+	{
+		bDead = true;
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+
+		if (AnimInstance && DeathMontage)
+		{
+			AnimInstance->Montage_Play(DeathMontage);
+		}
+	}
+
+	void AShooterCharacter::FinishDeath()
+	{
+		GetMesh()->bPauseAnims = true;
+		APlayerController * PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (PC)
+		{
+			DisableInput(PC);
+		}
+			
+	}
 
 // Called when the game starts or when spawned
 void AShooterCharacter::BeginPlay()
@@ -255,8 +306,9 @@ void AShooterCharacter::FireWeapon()
 
 }
 
-bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamLocation)
+bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FHitResult& OutHitResult)
 {
+	FVector OutBeamLocation;
 	// Check for crosshair trace hit
 	FHitResult CrosshairHitResult;
 	bool bCrosshairHit = TraceUnderCrosshairs(CrosshairHitResult, OutBeamLocation);
@@ -273,26 +325,25 @@ bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, 
 
 	// Perform a second trace from gun barrel
 
-	FHitResult WeaponTraceHit;
 	const FVector WeaponTraceStart{ MuzzleSocketLocation };
 	const FVector StartToEnd{ OutBeamLocation - MuzzleSocketLocation };
 	const FVector WeaponTraceEnd{ MuzzleSocketLocation + StartToEnd * 1.25f };
-	GetWorld()->LineTraceSingleByChannel(WeaponTraceHit, WeaponTraceStart, WeaponTraceEnd, ECollisionChannel::ECC_Visibility);
+	GetWorld()->LineTraceSingleByChannel(OutHitResult, WeaponTraceStart, WeaponTraceEnd, ECollisionChannel::ECC_Visibility);
 
-	if (WeaponTraceHit.bBlockingHit) // object between weapon barrel and BeamEndPoint?
+	if (!OutHitResult.bBlockingHit) // object between weapon barrel and BeamEndPoint?
 	{
-		OutBeamLocation = WeaponTraceHit.Location;
-		return true;
+		OutHitResult.Location = OutBeamLocation;
+		return false;
 	}
 
-	return false;
+	return true;
 	
 }
 
 void AShooterCharacter::AimingButtonPressed()
 {
 	bAimingButtonPressed = true;
-	if (CombatState != ECombatState::ECS_Reloading && CombatState != ECombatState::ECS_Equipping)
+	if (CombatState != ECombatState::ECS_Reloading && CombatState != ECombatState::ECS_Equipping && CombatState != ECombatState::ECS_Stunned)
 	{
 		Aim();
 	}
@@ -457,6 +508,8 @@ void AShooterCharacter::StartFireTimer()
 
 void AShooterCharacter::AutoFireReset()
 {
+	if (CombatState == ECombatState::ECS_Stunned) return;
+
 	CombatState = ECombatState::ECS_Unoccupied;
 
 	if (EquippedWeapon == nullptr) return;
@@ -711,21 +764,75 @@ void AShooterCharacter::SendBullet()
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), EquippedWeapon->GetMuzzleFlash(), SocketTransform);
 		}
 
-		FVector BeamEnd;
-		bool bBeamEnd = GetBeamEndLocation(SocketTransform.GetLocation(), BeamEnd);
+		FHitResult BeamHitResult;
+		bool bBeamEnd = GetBeamEndLocation(SocketTransform.GetLocation(), BeamHitResult);
 
 		if (bBeamEnd)
 		{
-			if (ImpactParticles)
+			// Does hit Actor implement BulletHitInterface?
+			if (BeamHitResult.GetActor())
 			{
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, BeamEnd);
+				IBulletHitInterface* BulletHitInterface = Cast<IBulletHitInterface>(BeamHitResult.GetActor());
+
+				if (BulletHitInterface)
+				{
+					BulletHitInterface->BulletHit_Implementation(BeamHitResult, this, GetController());
+				}
+
+				AEnemy* HitEnemy = Cast<AEnemy>(BeamHitResult.GetActor());
+				if (HitEnemy)
+				{
+					int32 Damage{};
+
+					if (BeamHitResult.BoneName.ToString() == HitEnemy->GetHeadBone())
+					{
+						// Head shot
+						Damage = EquippedWeapon->GetHeadShotDamage();	
+						float Multiplier = EquippedWeapon->GetDamageRarityMultiplier();
+						int32 FinalDamage = Damage + (Damage * Multiplier);
+						UGameplayStatics::ApplyDamage(
+							BeamHitResult.GetActor(),
+							FinalDamage,
+							GetController(),
+							this,
+							UDamageType::StaticClass());
+						HitEnemy->ShowHitNumber(FinalDamage, BeamHitResult.Location, true);
+					}
+					else
+					{
+						// Body shot
+						Damage = EquippedWeapon->GetDamage();
+						float Multiplier = EquippedWeapon->GetDamageRarityMultiplier();
+						int32 FinalDamage = Damage + (Damage * Multiplier);
+						UGameplayStatics::ApplyDamage(
+							BeamHitResult.GetActor(),
+							FinalDamage,
+							GetController(),
+							this,
+							UDamageType::StaticClass());
+						HitEnemy->ShowHitNumber(FinalDamage, BeamHitResult.Location, false);
+						
+					}
+
+					
+				
+				}
 			}
+			else
+			{
+				// Spawn default particles
+				if (ImpactParticles)
+				{
+					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, BeamHitResult.Location);
+				}
+			}
+		
 
 			UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), BeamParticles, SocketTransform);
 
 			if (Beam)
 			{
-				Beam->SetVectorParameter(FName("Target"), BeamEnd);
+				Beam->SetVectorParameter(FName("Target"), BeamHitResult.Location);
 			}
 		}
 
@@ -1039,6 +1146,19 @@ void AShooterCharacter::UnhighlightInventorySlot()
 	HighlightedSlot = -1;
 }
 
+void AShooterCharacter::Stun()
+{
+	if (Health <= 0.f) return;
+
+	CombatState = ECombatState::ECS_Stunned;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && HitReactMontage)
+	{
+		AnimInstance->Montage_Play(HitReactMontage);
+	}
+}
+
 EPhysicalSurface AShooterCharacter::GetSurfaceType()
 {
 	FHitResult HitResult;
@@ -1056,6 +1176,18 @@ EPhysicalSurface AShooterCharacter::GetSurfaceType()
 	return UPhysicalMaterial::DetermineSurfaceType(HitResult.PhysMaterial.Get());
 
 }
+
+void AShooterCharacter::EndStun()
+{
+	CombatState = ECombatState::ECS_Unoccupied;
+
+	if (bAimingButtonPressed)
+	{
+		Aim();
+	}
+}
+
+
 
 int32 AShooterCharacter::GetInterpLocationIndex()
 {
@@ -1135,6 +1267,8 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 void AShooterCharacter::FinishReloading()
 {
+	if (CombatState == ECombatState::ECS_Stunned) return;
+
 	// Update the CombatState
 	CombatState = ECombatState::ECS_Unoccupied;
 
@@ -1175,6 +1309,8 @@ void AShooterCharacter::FinishReloading()
 
 void AShooterCharacter::FinishEquipping()
 {
+	if (CombatState == ECombatState::ECS_Stunned) return;
+
 	CombatState = ECombatState::ECS_Unoccupied;
 	if (bAimingButtonPressed)
 	{

@@ -2,6 +2,7 @@
 
 
 #include "Weapon.h"
+#include "Item.h"
 
 AWeapon::AWeapon() :
 	ThrowWeaponTime(0.7f),
@@ -122,6 +123,8 @@ void AWeapon::OnConstruction(const FTransform& Transform)
 			FireSound = WeaponDataRow->FireSound;
 			BoneToHide = WeaponDataRow->BoneToHide;
 			bAutomatic = WeaponDataRow->bAutomatic;
+			Damage = WeaponDataRow->Damage;
+			HeadShotDamage = WeaponDataRow->HeadShotDamage;
 		}
 
 		if (GetMaterialInstance())
